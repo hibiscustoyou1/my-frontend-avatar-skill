@@ -42,5 +42,6 @@ description: 当你（大模型）收到开发或修改 Vue 2 前端组件、表
 - => 涉及编程式弹窗骨架新建：立即读取 `references/ef-dialog.md`
 - => 需要在界面渲染特殊的悬浮或失效解释时：立即读取 `references/help-popover.md`
 - => 涉及需要用到预置业务状态字段解释时：立即读取 `references/status-dictionary.md`
+- => 涉及监控大盘、后端配置化监控图表的渲染或定制图表时：立即读取 `references/panel-render.md`
 
 【警告】一旦确定命中上述组件需求，立即查阅文件并套用其中的示例进行代码产出。
