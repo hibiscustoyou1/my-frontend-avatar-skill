@@ -74,3 +74,42 @@ data() {
 >   }
 > }
 > ```
+
+## 行合并与表头合并
+
+当需要将表格的某些行数据根据相同的标识合并，或者实现多级嵌套表头的时候，可以直接通过配置实现。
+
+### 基本使用骨架
+
+在 `ef-table` 中配置 `need-merge` 开启行合并开关，并提供 `children-prop` （例如 `subjects`，默认为 `children`）指出作为子级循环的数据键名。同时需要在 `columns` 的对应列设置中配置 `subjects`（默认为 `children`） 数组来实现多层表头的合并展示。
+
+```vue
+<template>
+  <ef-table :rows="tableData" :cols="columns" need-merge children-prop="subjects"></ef-table>
+</template>
+
+<script>
+export default {
+  data() {
+    return {
+      columns: [
+        { prop: 'id', label: 'ID' },
+        { prop: 'name', label: '姓名' },
+        { prop: 'subject', label: '科目' },
+      ],
+      tableData: [
+        {
+          id: '10001',
+          name: '王小虎',
+          subjects: [
+            { subject: '语文' },
+            // ... 代表基于同一主键（如 id=10001）需要行合并的子级数据集合
+          ]
+        },
+        // ... 更多外部主体数据
+      ]
+    }
+  }
+}
+</script>
+```
