@@ -12,6 +12,24 @@ description: 当你（大模型）收到开发或修改 Vue 2 前端组件、表
 ## 架构说明与基本倾向 (Core Architecture & Preferences)
 
 - **核心框架**: Vue 2 (Options API 为主)。
+  - **新建组件规范**: 使用如下极简基础模板：
+    ```vue
+    <template>
+      <div>xxx</div>
+    </template>
+
+    <script>
+      export default {
+        name: 'xxx',
+        data() {
+          return {}
+        },
+        created() {},
+        methods: {}
+      }
+    </script>
+    ```
+  - **维护旧组件规范**: 当维护原使用 TypeScript（`<script lang="ts">`）编写的旧组件时，必须继续沿用 TS 语法，禁止随意降级或混写。
 - **UI 组件库**: 基于 Element UI 深度定制封装的 `ef-` 开头系列组件（如 `ef-dialog`, `ef-table`, `ef-condition`, `ef-pagination` 等）。在书写代码时，遇到此类对应场景，强制使用 `ef-` 组件替代 `el-` 基础组件。
 - **状态管理**: 借助 Vuex 按需通过 `mapState` 注入（例如 `mapState('core', ['desktopSvc'])`）。
 - **国际化与鉴权**: 
