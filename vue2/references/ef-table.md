@@ -5,6 +5,9 @@
 
 ## 伪代码骨架
 基于双绑定的强规范写法：
+
+> **注意**：`:cols="columns"` 中的 `columns` 是一个数组，由多个对象构成，每个对象需包含 `prop`（字段名）、`label`（显示在表头的中文名称）、及其它 `el-table` 配置。
+
 ```vue
 <!-- Table 组件 -->
 <ef-table :cols="columns" :rows="tableData">
@@ -28,10 +31,10 @@ data() {
   return {
     columns: [
       { prop: 'resourceId', label: '资源ID', minWidth: 100 },
-      // 对应 template #snapshotName 的自定义插槽列
-      { prop: 'snapshotName', label: '快照名称', slotName: 'snapshotName' },
+      // 对应 template #snapshotName 的自定义插槽列，语法为 #{prop}
+      { prop: 'snapshotName', label: '快照名称' },
       // 对应 template #operate 的操作列
-      { prop: 'operate', label: '操作', width: 120, slotName: 'operate', fixed: 'right' }
+      { prop: 'operate', label: '操作', width: 120, fixed: 'right' }
     ]
   }
 }
@@ -48,28 +51,25 @@ data() {
   <el-table-column label="云电脑编码" prop="desktopOid"></el-table-column>
   <el-table-column label="云电脑名称" prop="desktopName"></el-table-column>
 </ef-table-selection>
-<ef-table ref="table" :cols="columns" :rows="tableData" row-key="desktopId" @on-selection="onSelection" v-loading="loading">
+<ef-table ref="table" :cols="columns" :rows="tableData" row-key="desktopId" @selection-change="onSelection" v-loading="loading">
   <!-- 运行状态等自定义列 -->
-  <template v-slot:useStatus="{row}">
+  <template #useStatus="{row}">
     <ef-status :status="row.useStatus" type="desktop.DESKTOP_USE_STATUS_META"></ef-status>
   </template>
-  <template v-slot:vmType="{row}">
+  <template #vmType="{row}">
     {{ renderVmType(row.vmType) }}
   </template>
 </ef-table>
 ```
 
-> **注意**：`:cols="columns"` 中的 `columns` 是一个数组，由多个对象构成，每个对象需包含 `prop`（字段名）、`label`（显示在表头的中文名称）、及其它配置。如果是自定插槽列，则在 `columns` 中定义 `slotName` 以对应模板内的 `#slotName`。
-> 
 > **`columns` 示例结构**：
 > ```javascript
 > data() {
 >   return {
 >     columns: [
 >       { prop: 'desktopName', label: '云电脑名称', minWidth: 120 },
->       { prop: 'ipAddress', label: 'IP地址', minWidth: 140 },
->       // 对应 template #useStatus 的自定义插槽列
->       { prop: 'useStatus', label: '运行状态', slotName: 'useStatus' }
+>       { prop: 'ipAddress', label: 'IP地址' },
+>       { prop: 'useStatus', label: '运行状态' }
 >     ]
 >   }
 > }
@@ -81,7 +81,7 @@ data() {
 
 ### 基本使用骨架
 
-在 `ef-table` 中配置 `need-merge` 开启行合并开关，并提供 `children-prop` （例如 `subjects`，默认为 `children`）指出作为子级循环的数据键名。同时需要在 `columns` 的对应列设置中配置 `subjects`（默认为 `children`） 数组来实现多层表头的合并展示。
+在 `ef-table` 中配置 `need-merge` 开启行合并开关，并提供 `children-prop` （例如 `subjects`，不填默认为 `children`）指出作为子级循环的数据键名。同时需要在 `columns` 的对应列设置中配置 `subjects`（默认为 `children`） 数组来实现多层表头的合并展示。
 
 ```vue
 <template>

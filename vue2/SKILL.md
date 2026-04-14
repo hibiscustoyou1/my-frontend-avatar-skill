@@ -15,17 +15,27 @@ description: 当你（大模型）收到开发或修改 Vue 2 前端组件、表
   - **新建组件规范**: 使用如下极简基础模板：
     ```vue
     <template>
-      <div>xxx</div>
+      <div>tmp</div>
     </template>
-
+    
     <script>
+      import XxxApi from "@/api/xxx"
+    
       export default {
-        name: 'xxx',
+        name: 'tmp',
         data() {
           return {}
         },
-        created() {},
-        methods: {}
+        mounted() {
+          this.getXxx()
+        },
+        methods: {
+          getXxx() {
+            XxxApi.getXxx().then(res => {
+              console.log(res)
+            })
+          }
+        }
       }
     </script>
     ```
