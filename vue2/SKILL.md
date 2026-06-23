@@ -52,6 +52,40 @@ description: 当你（大模型）收到开发或修改 Vue 2 前端组件、表
 - 页面级别变量必须归拢合并。例如加载状态必定结构化在 `loadings: { table: false, submit: false }` 中。
 - API Promise 的回收统一使用 `.finally(() => { this.loadings.xx = false })` 在结束周期进行复位。
 
+<!-- Evolution: 2026-06-17 | source: ep-2026-06-17-001 | pattern: event_driven_over_watch | confidence: 0.95 -->
+
+### 1.5 事件驱动优先，慎用 watch（用户偏好）
+非必要情况下**不使用 `watch`**，而采用**事件驱动触发**。watch 是隐式依赖的黑盒，容易产生难以追踪的响应链和副作用：
+
+**首选方案**：
+- **事件驱动**：通过 `$emit` / `@event` 显式传递变化
+  ```vue
+  <!-- 父组件 -->
+  <ChildComponent @change="handleSearch" />
+  <!-- 子组件 -->
+  this.$emit('change', keyword);
+  ```
+- **computed 派生**：能用 computed 就不用 watch + data
+  ```javascript
+  computed: {
+    filteredList() {
+      return this.list.filter(item => item.status === this.activeStatus);
+    }
+  }
+  ```
+- **方法直接调用**：通过 ref 调用子组件方法
+  ```javascript
+  this.$refs.child.refresh();
+  ```
+
+**watch 仅在以下场景使用**（且须注释说明原因）：
+- 监听第三方库状态变化
+- 复杂对象深层变化检测（deep watch）
+- 异步操作结果触发副作用
+- 无事件源可控的响应式数据源
+
+**红线**：禁止 watch 嵌套 watch 的链式响应；watch 内禁止修改被监听的源数据。
+
 ### 2. 拒斥内联式弹窗控制 (Programmatic Modals Required)
 坚决反对并在审查阶段拒绝通过父组件维护大量的 `v-if` / `visible.sync` 控制弹层。必须一律使用基于原型的抽象层实现：
 - 使用 `this.$modal({ title, component: () => import('...'), data: { rowData } })` 控制。
@@ -66,6 +100,7 @@ description: 当你（大模型）收到开发或修改 Vue 2 前端组件、表
 遇到具体组件或业务需求时，**你必须（MUST）** 仅单独调阅下方匹配的特定文件以提取封装骨架，严禁依靠预训练知识强行生成原生 Element UI 标签：
 
 - => 涉及顶部表单联合检索栏：立即读取 `references/ef-condition.md`
+- => 涉及搜索组件 ef-search（含独立使用）：立即读取 `references/ef-condition.md`
 - => 涉及数据表格挂载与翻页：立即读取 `references/ef-table.md`
 - => 涉及编程式弹窗骨架新建：立即读取 `references/ef-dialog.md`
 - => 需要在界面渲染特殊的悬浮或失效解释时：立即读取 `references/help-popover.md`
