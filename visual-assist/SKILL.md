@@ -31,15 +31,70 @@ description: 当用户要求提供或实现可视化辅助、交互式说明页�
 - 页面是纯静态制品：使用相对或内嵌资源，不依赖项目开发服务器路由；不修改业务源码或项目构建配置。
 - 内容结构：标题 → 一句话目标/结论 → 主要可视化 → 图例/阅读指引（确有需要时）→ 事实来源、假设与生成时间（涉及事实、数据或推断时）。不为“好看”添加空洞的仪表盘、卡片或动效。
 
-## 依赖策略
+## 样式与固定主题（强制）
 
-- 默认单文件自包含：内嵌 CSS/JavaScript/SVG。
-- 允许 CDN（Vue、Tailwind、D3、ECharts、Mermaid 等）当且仅当：用户指定，或该库实质性降低实现成本。约束：固定具体版本（禁止 `@latest`）；仅引入实际使用的库；使用可信 CDN；不从 CDN 拉取业务数据、工作区数据或密钥；页面 HTML 注释中列明外部依赖名称、版本与用途；CDN 加载失败时页面须显示有意义的失败提示而非空白；用户要求离线可用时禁止 CDN。
+所有页面**必须使用 Tailwind CSS（CDN 固定版本）**并采用下方固定主题，保证任何 harness、任何项目产出的页面风格一致：
+
+- **必须**：`<head>` 中原样包含下面的模板块；布局与样式一律使用 Tailwind 工具类。
+- **禁止**：引入其他 UI/CSS 框架（Bootstrap、Element、Ant 等）、手写全局样式表、自造配色。
+- **可选**：图表/关系可视化库（D3、ECharts、Mermaid）仍可按需引入，但颜色必须服从主题令牌。
+- **固定浅色主题**：不做暗色切换；正文、卡片、语义色只用下列令牌。
+
+```html
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          brand: { 50:'#eef2ff',100:'#e0e7ff',500:'#6366f1',600:'#4f46e5',700:'#4338ca' },
+          ok: '#059669', warn: '#d97706', risk: '#e11d48',
+        },
+        fontFamily: {
+          sans: ['system-ui','-apple-system','Segoe UI','PingFang SC','Microsoft YaHei','sans-serif'],
+          mono: ['ui-monospace','SFMono-Regular','Consolas','monospace'],
+        },
+        boxShadow: { card: '0 1px 3px rgb(15 23 42 / 0.08)' },
+      },
+    },
+  }
+</script>
+```
+
+主题令牌约定：
+
+| 用途 | 令牌 |
+|---|---|
+| 页面背景 | `bg-slate-50` |
+| 卡片/面板 | `bg-white rounded-xl shadow-card`，内边距 `p-5` 以上 |
+| 主文字 / 次文字 | `text-slate-800` / `text-slate-500` |
+| 主色（标题强调、选中态、主按钮） | `text-brand-600` / `bg-brand-600` |
+| 语义色（成功/警告/风险） | `text-ok` / `text-warn` / `text-risk`，色块用对应 `bg-*` 加 `text-white` |
+| 页面容器 | `max-w-5xl mx-auto px-6 py-8` |
+| 控件圆角 | `rounded-lg`；代码与数值 `font-mono` |
+
+CDN 加载失败兜底（紧跟在上述脚本之后，原样保留）：
+
+```html
+<script>
+  window.addEventListener('DOMContentLoaded', function () {
+    if (!window.tailwind) {
+      var b = document.createElement('div');
+      b.textContent = '样式依赖（Tailwind CDN）加载失败：内容仍可阅读，但排版未按主题渲染。';
+      b.setAttribute('style', 'position:sticky;top:0;padding:8px 16px;background:#fef3c7;color:#92400e;font:14px system-ui;z-index:9999');
+      document.body.prepend(b);
+    }
+  });
+</script>
+```
+
+用户明确要求“离线可用/无外网”时：不得使用 CDN，改用内联等价样式并遵循同一套令牌（色值见上方 `tailwind.config`）。
 
 ## 页面质量基线
 
 - 按关系选择形式：步骤/分支→流程图；时间顺序→时间线；层级与依赖→架构图/树；方案权衡→对比表/矩阵；状态演变→状态机；趋势→图表；复杂关系图须同时提供结构化文字列表。
-- 正文 ≥16px、辅助文本 ≥14px；高对比；色彩语义一致，颜色不作为状态的唯一表达；宽屏多列、窄屏单列；关键内容不依赖悬停；交互元素键盘可达并有可见焦点；动效仅用于状态与反馈并尊重 `prefers-reduced-motion`。
+- 字号：正文 `text-base`（16px）起、辅助文本 `text-sm`（14px）起；层级用 `text-2xl`/`text-xl` 标题与留白表达。
+- 色彩语义一致（见主题令牌），颜色不作为状态的唯一表达，需辅以文字或图标；宽屏多列、窄屏单列（`grid` + 响应式断点）；关键内容不依赖悬停；交互元素键盘可达并有可见焦点（`focus-visible:ring`）；动效仅用于状态与反馈并尊重 `prefers-reduced-motion`。
 
 ## 事实与安全
 

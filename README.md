@@ -1,38 +1,45 @@
-# my skills
+# visual-assist（跨 agent 通用 skill）
 
-跨 agent 通用技能集合。每个子目录是一个独立技能（`SKILL.md` + 可选脚本），
-支持 Claude Code、OpenCode、Codex、GitHub Copilot、Cursor、DSH 等。
+一个纯粹、可移植的 Agent Skill：当用户要求“可视化辅助 / 交互式说明页 / 流程图 /
+架构图 / 时间线 / 对比页 / 本地演示页面”时，生成、验证并发布可访问的 HTML
+可视化制品。
 
-## 技能列表
+## 结构
 
-| 目录 | 名称 | 用途 |
-|---|---|---|
-| `vue2/` | `frontend-avatar-vue2` | Vue 2 前端开发规约分身（ef- 组件库、弹窗编排、状态字典） |
-| `visual-assist/` | `visual-assist` | 可视化辅助页面：生成、验证并发布可访问的 HTML 可视化制品 |
+```text
+visual-assist/
+  SKILL.md                  # frontmatter（name/description）+ 全部行为规范
+  scripts/preview-server.py # 确定性端口与本地预览服务（仅依赖 python3）
+install.sh                  # 一次安装到多个 harness
+```
 
 ## 安装
 
 ```sh
-git clone https://github.com/hibiscustoyou1/my-frontend-avatar-skill
-cd my-frontend-avatar-skill
 sh install.sh
 ```
 
-- 规范副本安装到 `~/.agents/skills/<name>`（Codex / Cursor / Copilot /
-  OpenCode agent 兼容层 / DSH 原生读取）；
-- Claude Code（`~/.claude/skills`）、OpenCode（`~/.config/opencode/skills`）、
-  Copilot（`~/.copilot/skills`）、Codex（`~/.codex/skills`）为符号链接；
-- 只装一个技能：`ONLY=visual-assist sh install.sh`；
-- 跳过某 harness：`SKIP_CLAUDE=1 sh install.sh` 等；
-- 项目级安装：把对应技能目录复制进项目的 `.agents/skills/` 即可。
+规范副本安装到 `~/.agents/skills/visual-assist`（Codex、Cursor、Copilot、
+OpenCode agent 兼容层、DSH 均原生读取该目录），并为以下 harness 创建符号链接：
 
-## visual-assist 说明
+- Claude Code：`~/.claude/skills/visual-assist`
+- OpenCode：`~/.config/opencode/skills/visual-assist`
+- Copilot：`~/.copilot/skills/visual-assist`
+- Codex：`~/.codex/skills/visual-assist`（可选；`~/.agents` 已覆盖用户级）
 
-- 显式调用：`/visual-assist <页面目标>`；命中“可视化辅助 / 交互式说明页 /
-  流程图 / 架构图 / 时间线 / 对比页 / 本地演示页面”时自动加载。
-- 制品落在项目 `.agents/visuals/YYYY-MM-DD-<topic>.html`，默认单文件自包含，
-  允许固定版本的 CDN（Vue / Tailwind / D3 等）。
-- 预览发布由技能自带 `scripts/preview-server.py` 完成（仅依赖 python3）：
-  端口 = `38700 + DJB2(项目绝对路径) % 301`，健康端点复用已有服务，仅绑定
-  127.0.0.1；脚本失败时降级交付文件路径，绝不猜测 URL。
-- 技能零依赖：不引用任何 harness 私有工具。
+跳过某个 harness：`SKIP_CLAUDE=1 sh install.sh` 等。
+项目级安装：把 `visual-assist/` 目录复制到项目的 `.agents/skills/`。
+
+## 设计要点
+
+- **零外部依赖**：预览脚本仅用 python3 标准库；没有 python3 时 skill 走降级
+  交付（给出 HTML 文件路径，不猜测 URL）。
+- **端口确定性**：`38700 + DJB2(工作区绝对路径) % 301`，与 DSH 的
+  `visual_assist_publish` 工具共用同一算法和健康端点，可互相复用服务。
+- **固定视觉风格**：强制 Tailwind CSS（CDN 固定版本 3.4.17）+ 固定浅色主题
+  令牌（indigo 主色 / slate 中性 / emerald-amber-rose 语义色），所有页面
+  风格统一；离线场景降级为同令牌的内联样式。
+- **agent 不自由发挥**：skill 明确禁止自行算端口、扫描端口、起替代服务或拼
+  URL；只能原样运行 skill 自带的脚本。skill 不依赖任何 harness 私有工具
+  （端口算法与 DSH 的 `visual_assist_publish` 工具一致，二者若同时存在可
+  互相复用已启动的服务，但这是协议兼容，不是依赖）。
