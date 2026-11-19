@@ -103,15 +103,17 @@ CDN 加载失败兜底（紧跟在上述脚本之后，原样保留）：
 
 ## 发布（原样运行本 skill 自带脚本）
 
-生成并通过静态检查后，运行本 skill 自带的脚本（本 SKILL.md 所在目录下）：
+生成并通过静态检查后，运行本 skill 自带的脚本（本 SKILL.md 所在目录下），**同时传入项目绝对路径和入口 HTML**：
 
 ```sh
-python3 <skill-dir>/scripts/preview-server.py <项目绝对路径>
+python3 <skill-dir>/scripts/preview-server.py <项目绝对路径> <入口HTML路径>
 ```
 
+- 入口路径可写工作区相对路径（如 `.agents/visuals/2026-11-19-x.html`）或绝对路径；
 - 原样执行，不修改、不复述其内部逻辑，也不自行计算端口；
-- 脚本输出 `origin=http://localhost:<port>` 与 `status=started|reused`；预览 URL 即 `origin` 加上相对 `.agents/visuals/` 的文件路径（URL 编码）；
-- 脚本退出码非 0（含无 python3、端口被外来服务占用）时**不做任何变通**：不换端口、不换服务器、不安装依赖；
+- 脚本输出 `url=http://localhost:<port>/<文件名>`——该 URL 由脚本在服务端拼好并验证过可达；
+- **最终回复只准原样引用脚本输出的 `url=` 行，禁止用 `origin=` 自行拼接任何路径**（服务根目录就是 `.agents/visuals`，URL 中不含 `.agents/visuals/` 前缀）；
+- 脚本退出码非 0（含无 python3、端口被外来服务占用、入口校验失败、URL 验证失败）时**不做任何变通**：不换端口、不换服务器、不安装依赖；
 - 此时降级交付：仍交付已生成的 HTML 文件路径，说明“预览发布不可用，文件为自包含 HTML，可由用户在浏览器直接打开”。不提供任何未经验证或猜测的 URL。
 
 ## 交付格式

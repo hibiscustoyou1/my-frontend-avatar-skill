@@ -2,7 +2,7 @@
 """Deterministic local preview server for visual-assist pages.
 
 Usage:
-  preview-server.py <workspace> [--foreground]
+  preview-server.py <workspace> [<entry>] [--foreground]
   preview-server.py --serve <visuals-root> <port> [--foreground]
 
 The port is derived deterministically from the absolute workspace path
@@ -11,11 +11,17 @@ harnesses. A running server is detected through a health endpoint that
 reports the exact directory it serves, so a second invocation reuses it
 instead of guessing. The server binds 127.0.0.1 only.
 
+When <entry> is supplied, the script resolves it relative to the workspace,
+verifies it is a file inside the visuals root, fetches it over HTTP, and
+prints a ready-to-use `url=` line. Callers must use that line verbatim and
+never assemble URLs from `origin` themselves.
+
 Exit codes:
-  0  success (prints the preview origin and reuse status)
+  0  success (prints the preview origin and reuse status, plus url when entry is given)
   2  the workspace port is occupied by a foreign service
   3  no python http server could be started or verified
-  4  .agents/visuals missing under the workspace
+  4  .agents/visuals missing under the workspace, or the entry is invalid
+  5  the entry exists but the preview URL failed verification
 """
 
 from __future__ import annotations
@@ -29,6 +35,7 @@ import tempfile
 import time
 import urllib.error
 import urllib.request
+from urllib.parse import quote
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 
@@ -127,13 +134,43 @@ def main(argv: list[str]) -> int:
     if not root.is_dir():
         print(f"missing directory: {root}", file=sys.stderr)
         return 4
-    root = str(root.resolve())
+    root = root.resolve()
+
+    entry_url_path: str | None = None
+    if len(argv) > 1:
+        entry = Path(argv[1])
+        if not entry.is_absolute():
+            entry = workspace / entry
+        entry = entry.resolve()
+        if not entry.is_file():
+            print(f"entry not found: {entry}", file=sys.stderr)
+            return 4
+        try:
+            entry_url_path = "/".join(
+                quote(part) for part in entry.relative_to(root).parts
+            )
+        except ValueError:
+            print("entry must be inside .agents/visuals", file=sys.stderr)
+            return 4
+
     port = port_for(str(workspace))
 
-    if health_matches(port, root):
-        print(f"status=reused")
-        print(f"origin=http://localhost:{port}")
+    def report(status: str) -> int:
+        origin = f"http://localhost:{port}"
+        print(f"status={status}")
+        print(f"origin={origin}")
+        if entry_url_path is not None:
+            url = f"{origin}/{entry_url_path}"
+            try:
+                verify_page(url)
+            except RuntimeError as error:
+                print(f"preview verification failed: {error}", file=sys.stderr)
+                return 5
+            print(f"url={url}")
         return 0
+
+    if health_matches(port, str(root)):
+        return report("reused")
 
     if not port_is_free(port):
         print(
@@ -143,22 +180,20 @@ def main(argv: list[str]) -> int:
         return 2
 
     if foreground:
-        serve_forever(root, port)
+        serve_forever(str(root), port)
         return 0
 
     log = Path(tempfile.gettempdir()) / f"visual-assist-{port}.log"
     with open(log, "wb") as sink:
         subprocess.Popen(
-            [sys.executable, os.path.abspath(__file__), "--serve", root, str(port)],
+            [sys.executable, os.path.abspath(__file__), "--serve", str(root), str(port)],
             stdout=sink,
             stderr=sink,
             start_new_session=True,
         )
     for _ in range(50):
-        if health_matches(port, root):
-            print("status=started")
-            print(f"origin=http://localhost:{port}")
-            return 0
+        if health_matches(port, str(root)):
+            return report("started")
         time.sleep(0.1)
     print("server did not become healthy", file=sys.stderr)
     return 3
