@@ -33,27 +33,38 @@ description: 当用户要求提供或实现可视化辅助、交互式说明页�
 
 ## 静态依赖本地化（强制）
 
-- 所有第三方静态依赖（Tailwind、Vue、ECharts 等）**先下载到 `.agents/visuals/static/`**，页面只引用本地相对路径 `static/<文件名>`，**禁止运行时从线上拉取**，避免每次访问都重新请求 CDN。
-- 文件名固定为 `<库名>-<精确版本>.<扩展名>`；文件已存在则**直接复用，不重复下载**。
-- **来源优先级**：① jsdelivr（`https://cdn.jsdelivr.net/npm/<pkg>@<version>/<file>`）；② GitHub（`https://cdn.jsdelivr.net/gh/<user>/<repo>@<tag>/<file>` 或 `https://raw.githubusercontent.com/<user>/<repo>/<tag>/<file>`）；③ 其它源（unpkg、官方站点等）仅作兜底。选定后把精确 URL 记入 HTML 注释。
+- 所有第三方静态依赖（Tailwind、Vue、ECharts 等）**必须存放在 `.agents/visuals/static/`**，页面只引用本地相对路径 `static/<文件名>`，**禁止运行时从线上拉取**，避免每次访问都重新请求 CDN。
+- 文件名固定为 `<库名>-<精确版本>.<扩展名>`。
 - 固定版本清单（除非用户指定其它版本）：
 
-| 库 | 本地文件名 | 首选下载源 |
+| 库 | 本地文件名 | jsdelivr 源 |
 |---|---|---|
-| Tailwind | `static/tailwind-3.4.17.js` | `https://cdn.tailwindcss.com/3.4.17`（Play 版无 jsdelivr/GitHub 分发，唯一官方源） |
+| Tailwind | `static/tailwind-3.4.17.js` | 官方源 `https://cdn.tailwindcss.com/3.4.17`（Play 版无 jsdelivr/GitHub 分发，唯一官方源） |
 | Vue | `static/vue-3.5.13.global.prod.js` | `https://cdn.jsdelivr.net/npm/vue@3.5.13/dist/vue.global.prod.js` |
 | ECharts | `static/echarts-5.6.0.min.js` | `https://cdn.jsdelivr.net/npm/echarts@5.6.0/dist/echarts.min.js` |
+
+### 生成前探测与交互式询问
+
+1. **先生成页面前探测**：逐个检查所需依赖是否已存在于 `.agents/visuals/static/`（按上表文件名精确匹配）。
+2. **全部已存在** → 直接引用，不询问、不重新下载。
+3. **存在缺失** → 唤起**一次交互式询问**（合并为一个问题，列出缺失的依赖清单），请用户选择下载源：
+   - **1. jsdelivr 源（推荐）**：用上表 jsdelivr 地址下载；
+   - **2. github 源**：用 `https://cdn.jsdelivr.net/gh/<user>/<repo>@<tag>/<file>` 或 `https://raw.githubusercontent.com/<user>/<repo>/<tag>/<file>`（仅当仓库内含该文件；选定后把精确 URL 记入 HTML 注释）；
+   - **3. 其它（手动放置）**：跳过下载，由用户自行下载并放到 `.agents/visuals/static/` 下；HTML **直接写本地路径** `static/<文件名>`，并在最终回复中告知用户期望的文件名、版本与建议下载地址（文件放置前页面会显示模板自带的兜底提示条）。
+4. 该询问不受“实施前：需求判断”中减少提问规则的约束；除这一次依赖源询问外，不得再就依赖问题反复追问。
+5. 用户选择 1 或 2 后下载失败的降级规则不变：按来源优先级换源重试一次；仍失败且本地无缓存时按选项 3 处理（本地路径 + 回复中注明）。
+
+### 下载与引用
 
 - 下载示例：
 
   ```sh
   mkdir -p .agents/visuals/static
-  curl -fL -o .agents/visuals/static/tailwind-3.4.17.js https://cdn.tailwindcss.com/3.4.17
   curl -fL -o .agents/visuals/static/vue-3.5.13.global.prod.js https://cdn.jsdelivr.net/npm/vue@3.5.13/dist/vue.global.prod.js
   ```
 
-- 其它库同样先下载、版本化命名后再引用；HTML 注释中列明本地依赖的名称、版本与实际下载源 URL。
-- 下载失败时按来源优先级换下一个源重试一次；仍失败且本地无缓存时，可临时改引对应 CDN 地址，并在最终回复中注明“依赖未能本地化”；用户要求离线可用时改用内联等价样式（同一套主题令牌）。
+- 其它库同样先本地化到 `static/` 再引用；HTML 注释中列明本地依赖的名称、版本与实际下载源 URL。
+- 用户要求离线可用且本地无缓存时：改用内联等价样式（同一套主题令牌）。
 
 ## 样式与固定主题（强制）
 
