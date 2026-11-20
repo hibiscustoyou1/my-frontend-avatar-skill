@@ -31,17 +31,41 @@ description: 当用户要求提供或实现可视化辅助、交互式说明页�
 - 页面是纯静态制品：使用相对或内嵌资源，不依赖项目开发服务器路由；不修改业务源码或项目构建配置。
 - 内容结构：标题 → 一句话目标/结论 → 主要可视化 → 图例/阅读指引（确有需要时）→ 事实来源、假设与生成时间（涉及事实、数据或推断时）。不为“好看”添加空洞的仪表盘、卡片或动效。
 
+## 静态依赖本地化（强制）
+
+- 所有第三方静态依赖（Tailwind、Vue、ECharts 等）**先下载到 `.agents/visuals/static/`**，页面只引用本地相对路径 `static/<文件名>`，**禁止运行时从线上拉取**，避免每次访问都重新请求 CDN。
+- 文件名固定为 `<库名>-<精确版本>.<扩展名>`；文件已存在则**直接复用，不重复下载**。
+- **来源优先级**：① jsdelivr（`https://cdn.jsdelivr.net/npm/<pkg>@<version>/<file>`）；② GitHub（`https://cdn.jsdelivr.net/gh/<user>/<repo>@<tag>/<file>` 或 `https://raw.githubusercontent.com/<user>/<repo>/<tag>/<file>`）；③ 其它源（unpkg、官方站点等）仅作兜底。选定后把精确 URL 记入 HTML 注释。
+- 固定版本清单（除非用户指定其它版本）：
+
+| 库 | 本地文件名 | 首选下载源 |
+|---|---|---|
+| Tailwind | `static/tailwind-3.4.17.js` | `https://cdn.tailwindcss.com/3.4.17`（Play 版无 jsdelivr/GitHub 分发，唯一官方源） |
+| Vue | `static/vue-3.5.13.global.prod.js` | `https://cdn.jsdelivr.net/npm/vue@3.5.13/dist/vue.global.prod.js` |
+| ECharts | `static/echarts-5.6.0.min.js` | `https://cdn.jsdelivr.net/npm/echarts@5.6.0/dist/echarts.min.js` |
+
+- 下载示例：
+
+  ```sh
+  mkdir -p .agents/visuals/static
+  curl -fL -o .agents/visuals/static/tailwind-3.4.17.js https://cdn.tailwindcss.com/3.4.17
+  curl -fL -o .agents/visuals/static/vue-3.5.13.global.prod.js https://cdn.jsdelivr.net/npm/vue@3.5.13/dist/vue.global.prod.js
+  ```
+
+- 其它库同样先下载、版本化命名后再引用；HTML 注释中列明本地依赖的名称、版本与实际下载源 URL。
+- 下载失败时按来源优先级换下一个源重试一次；仍失败且本地无缓存时，可临时改引对应 CDN 地址，并在最终回复中注明“依赖未能本地化”；用户要求离线可用时改用内联等价样式（同一套主题令牌）。
+
 ## 样式与固定主题（强制）
 
-所有页面**必须使用 Tailwind CSS（CDN 固定版本）**并采用下方固定主题，保证任何 harness、任何项目产出的页面风格一致：
+所有页面**必须使用 Tailwind CSS（本地静态文件，固定版本）**并采用下方固定主题，保证任何 harness、任何项目产出的页面风格一致：
 
-- **必须**：`<head>` 中原样包含下面的模板块；布局与样式一律使用 Tailwind 工具类。
-- **禁止**：引入其他 UI/CSS 框架（Bootstrap、Element、Ant 等）、手写全局样式表、自造配色。
-- **可选**：图表/关系可视化库（D3、ECharts、Mermaid）仍可按需引入，但颜色必须服从主题令牌。
+- **必须**：先按“静态依赖本地化”下载 `static/tailwind-3.4.17.js`，`<head>` 中原样包含下面的模板块；布局与样式一律使用 Tailwind 工具类。
+- **禁止**：引入其他 UI/CSS 框架（Bootstrap、Element、Ant 等）、手写全局样式表、自造配色、直接引用线上 CDN。
+- **可选**：图表/关系可视化库（ECharts 等）同样先本地化到 `static/` 再引用，颜色服从主题令牌。
 - **固定浅色主题**：不做暗色切换；正文、卡片、语义色只用下列令牌。
 
 ```html
-<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<script src="static/tailwind-3.4.17.js"></script>
 <script>
   tailwind.config = {
     theme: {
@@ -73,14 +97,14 @@ description: 当用户要求提供或实现可视化辅助、交互式说明页�
 | 页面容器 | `max-w-5xl mx-auto px-6 py-8` |
 | 控件圆角 | `rounded-lg`；代码与数值 `font-mono` |
 
-CDN 加载失败兜底（紧跟在上述脚本之后，原样保留）：
+依赖加载失败兜底（紧跟在上述脚本之后，原样保留）：
 
 ```html
 <script>
   window.addEventListener('DOMContentLoaded', function () {
     if (!window.tailwind) {
       var b = document.createElement('div');
-      b.textContent = '样式依赖（Tailwind CDN）加载失败：内容仍可阅读，但排版未按主题渲染。';
+      b.textContent = '样式依赖（static/tailwind）加载失败：内容仍可阅读，但排版未按主题渲染。';
       b.setAttribute('style', 'position:sticky;top:0;padding:8px 16px;background:#fef3c7;color:#92400e;font:14px system-ui;z-index:9999');
       document.body.prepend(b);
     }
